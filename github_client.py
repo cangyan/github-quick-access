@@ -1,30 +1,44 @@
 # -*- coding: utf-8 -*-
-import requests
+import json
+import urllib.request
+import urllib.parse
+import urllib.error
 from typing import List, Dict, Optional
+
 
 class GitHubClient:
     BASE_URL = "https://api.github.com"
 
     def __init__(self, token: str):
         self.token = token
-        self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"token {token}",
-            "Accept": "application/vnd.github.v3+json"
-        })
+
+    def _make_request(self, url: str, params: dict = None) -> dict:
+        """发送 GET 请求并返回 JSON 数据"""
+        if params:
+            url = f"{url}?{urllib.parse.urlencode(params)}"
+
+        req = urllib.request.Request(url)
+        req.add_header("Authorization", f"token {self.token}")
+        req.add_header("Accept", "application/vnd.github.v3+json")
+
+        try:
+            with urllib.request.urlopen(req, timeout=30) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8") if e.fp else ""
+            raise Exception(f"GitHub API error: {e.code} {error_body}")
+        except Exception as e:
+            raise Exception(f"Request failed: {str(e)}")
 
     def get_user_repos(self, per_page: int = 100) -> List[Dict]:
         """获取当前用户的仓库（包括私有）"""
         repos = []
         page = 1
         while True:
-            resp = self.session.get(
+            data = self._make_request(
                 f"{self.BASE_URL}/user/repos",
                 params={"per_page": per_page, "page": page, "sort": "updated"}
             )
-            if resp.status_code != 200:
-                raise Exception(f"GitHub API error: {resp.status_code} {resp.text}")
-            data = resp.json()
             if not data:
                 break
             repos.extend(data)
@@ -38,13 +52,10 @@ class GitHubClient:
         repos = []
         page = 1
         while True:
-            resp = self.session.get(
+            data = self._make_request(
                 f"{self.BASE_URL}/orgs/{org}/repos",
                 params={"per_page": per_page, "page": page, "sort": "updated"}
             )
-            if resp.status_code != 200:
-                raise Exception(f"GitHub API error: {resp.status_code} {resp.text}")
-            data = resp.json()
             if not data:
                 break
             repos.extend(data)
@@ -64,7 +75,7 @@ class GitHubClient:
     def validate_token(self) -> bool:
         """验证 Token 是否有效"""
         try:
-            resp = self.session.get(f"{self.BASE_URL}/user")
-            return resp.status_code == 200
+            self._make_request(f"{self.BASE_URL}/user")
+            return True
         except:
             return False
