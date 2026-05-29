@@ -61,12 +61,24 @@ gh refresh    - 刷新所有账号的仓库缓存
 gh help       - 显示帮助
 ```
 
-搜索结果示例：
+### 交互流程
+
+1. 输入 `gh <关键词>` 搜索仓库
+2. 选择仓库回车 → 查询变为 `gh owner/repo`
+3. 显示 4 个页面选项：主页、MR、Actions、Issues
+4. 选择页面选项 → 打开对应 GitHub 页面
+
+### 搜索结果示例
+
 ```
-▶ [Personal] owner/repo           - 打开主页
-🔀 [Personal] owner/repo - MR      - 打开 Merge Requests
-⚡ [Personal] owner/repo - Actions - 打开 Actions
-📋 [Personal] owner/repo - Issues  - 打开 Issues
+# 搜索列表（选择仓库回车）
+owner/repo  公开仓库 | Personal | 回车选择页面
+
+# 选择后显示页面选项
+owner/repo 主页    - 打开主页
+owner/repo MR      - 打开 Merge Requests
+owner/repo Actions - 打开 Actions
+owner/repo Issues  - 打开 Issues
 ```
 
 ## 技术特点

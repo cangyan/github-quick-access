@@ -1,8 +1,11 @@
 # build
 lib/
 build/
+output/
 
 # python cache
 __pycache__/
 .mypy_cache/
 settings.json
+
+cache/

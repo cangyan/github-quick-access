@@ -1,3 +1,0 @@
-click
-babel
-python-dotenv

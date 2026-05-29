@@ -99,6 +99,10 @@ class Main:
         results = []
         q = param.strip()
 
+        # 去掉 gh 前缀（如果用户已输入）
+        if q.lower().startswith("gh "):
+            q = q[3:].strip()
+
         if not q:
             return [{
                 "Title": "GitHub Quick Access",
@@ -146,7 +150,7 @@ class Main:
                             private_label = "私有仓库" if repo.get("is_private") else "公开仓库"
                             return [
                                 {
-                                    "Title": f"gh ▶ {full_name} 主页",
+                                    "Title": f"{full_name} 主页",
                                     "SubTitle": f"{private_label} | {account_alias}",
                                     "IcoPath": ICON_PATH,
                                     "JsonRPCAction": {
@@ -155,7 +159,7 @@ class Main:
                                     }
                                 },
                                 {
-                                    "Title": f"gh 🔀 {full_name} MR",
+                                    "Title": f"{full_name} MR",
                                     "SubTitle": f"{private_label} | {account_alias}",
                                     "IcoPath": ICON_PATH,
                                     "JsonRPCAction": {
@@ -164,7 +168,7 @@ class Main:
                                     }
                                 },
                                 {
-                                    "Title": f"gh ⚡ {full_name} Actions",
+                                    "Title": f"{full_name} Actions",
                                     "SubTitle": f"{private_label} | {account_alias}",
                                     "IcoPath": ICON_PATH,
                                     "JsonRPCAction": {
@@ -173,7 +177,7 @@ class Main:
                                     }
                                 },
                                 {
-                                    "Title": f"gh 📋 {full_name} Issues",
+                                    "Title": f"{full_name} Issues",
                                     "SubTitle": f"{private_label} | {account_alias}",
                                     "IcoPath": ICON_PATH,
                                     "JsonRPCAction": {
@@ -219,18 +223,28 @@ class Main:
                         "SubTitle": f"{private_label} | {account_alias} | 回车选择页面",
                         "IcoPath": ICON_PATH,
                         "JsonRPCAction": {
-                            "method": "selectRepo",
-                            "parameters": [account["id"], repo_full_name]
+                            "method": "Flow.Launcher.ChangeQuery",
+                            "parameters": [f"gh {repo_full_name}", True],
+                            "dontHideAfterAction": True
                         }
                     })
 
-        # 如果只有一个精确匹配的结果，自动显示页面选项
+        # 如果只有一个精确匹配的结果，直接显示 4 个页面选项
         if len(results) == 1 and "/" in q:
-            exact_match = results[0]
-            repo_title = exact_match.get("Title", "")
-            if repo_title.lower() == q.lower():
-                # 精确匹配单个仓库，显示页面选项
-                return self.query(repo_title)
+            repo_title = results[0].get("Title", "")
+            if repo_title.lower() == q.lower() or (q.lower().startswith("gh ") and repo_title.lower() == q[3:].lower().strip()):
+                account_id = None
+                repo_full_name = repo_title
+                # 找到对应的 account_id
+                for acc in self._get_accounts():
+                    cache = self.cache_manager.get_cache(acc["id"], self.settings.get("cache_ttl_minutes", 30))
+                    if cache:
+                        for repo in cache.get("repositories", []):
+                            if repo.get("full_name") == repo_full_name:
+                                account_id = acc["id"]
+                                break
+                if account_id:
+                    return self.selectRepo(account_id, repo_full_name)
 
         return results[:self.settings.get("max_results", 20)]
 
@@ -275,7 +289,7 @@ class Main:
             webbrowser.open(url)
 
     def selectRepo(self, account_id: str, repo_full_name: str):
-        """JSON-RPC action: 选择仓库后显示 4 个页面选项"""
+        """JSON-RPC action: 选择仓库后直接显示 4 个页面选项"""
         account = next((a for a in self._get_accounts() if a.get("id") == account_id), None)
         if not account:
             return []
@@ -293,7 +307,7 @@ class Main:
         account_alias = account.get("alias", "unknown")
         return [
             {
-                "Title": f"gh ▶ {repo_full_name} 主页",
+                "Title": f"{repo_full_name} 主页",
                 "SubTitle": f"{private_label} | {account_alias}",
                 "IcoPath": ICON_PATH,
                 "JsonRPCAction": {
@@ -302,7 +316,7 @@ class Main:
                 }
             },
             {
-                "Title": f"gh 🔀 {repo_full_name} MR",
+                "Title": f"{repo_full_name} MR",
                 "SubTitle": f"{private_label} | {account_alias}",
                 "IcoPath": ICON_PATH,
                 "JsonRPCAction": {
@@ -311,7 +325,7 @@ class Main:
                 }
             },
             {
-                "Title": f"gh ⚡ {repo_full_name} Actions",
+                "Title": f"{repo_full_name} Actions",
                 "SubTitle": f"{private_label} | {account_alias}",
                 "IcoPath": ICON_PATH,
                 "JsonRPCAction": {
@@ -320,7 +334,7 @@ class Main:
                 }
             },
             {
-                "Title": f"gh 📋 {repo_full_name} Issues",
+                "Title": f"{repo_full_name} Issues",
                 "SubTitle": f"{private_label} | {account_alias}",
                 "IcoPath": ICON_PATH,
                 "JsonRPCAction": {
