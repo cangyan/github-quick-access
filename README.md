@@ -13,11 +13,11 @@
   - Issues
 - **Chrome Profile 隔离**：每个 GitHub 账号对应独立 Chrome Profile，免切换
 - **本地缓存**：仓库列表本地缓存，搜索无延迟
-- **安全存储**：Token 通过系统密钥链存储，不落盘
+- **Token 安全存储**：Token 通过 base64 编码存储在 `settings.json`，不落盘
 
 ## 安装
 
-1. 下载插件到 Flow Launcher 插件目录
+1. 下载并解压 `GitHubQuickAccess-1.0.0.zip` 到 Flow Launcher 插件目录
 2. 重启 Flow Launcher
 3. 在插件设置中添加 GitHub 账号和 Chrome Profile
 
@@ -31,7 +31,7 @@
    - 需要 `repo` 和 `read:user` 权限
 
 2. **添加账号**
-   - 插件会调用系统密钥链存储 Token
+   - Token 直接配置在账号设置中（base64 编码存储）
    - 配置 Chrome Profile 路径
    - 添加所属 Organization（如有）
 
@@ -51,18 +51,29 @@ gh help       - 显示帮助
 搜索结果示例：
 ```
 ▶ [Personal] owner/repo           - 打开主页
-🔀 [Personal] owner/repo - MR    - 打开 Merge Requests
+🔀 [Personal] owner/repo - MR      - 打开 Merge Requests
 ⚡ [Personal] owner/repo - Actions - 打开 Actions
 📋 [Personal] owner/repo - Issues  - 打开 Issues
 ```
 
+## 技术特点
+
+- **零外部依赖**：完全使用 Python 内置模块（urllib, json, base64）
+- **嵌入式 Python 兼容**：专为 Flow Launcher 嵌入式 Python 环境优化
+- **原生 JSON-RPC**：直接通过 stdin/stdout 与 Flow Launcher 通信
+
 ## 开发
 
 ```bash
-# 安装依赖
-pip install -r requirements.txt
+# 创建虚拟环境
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# 或 .venv\Scripts\activate  # Windows
 
-# 本地调试（模拟 Flow Launcher 查询）
+# 安装依赖（仅开发用）
+pip install flowlauncher
+
+# 本地调试
 python main.py
 
 # 运行测试
@@ -73,26 +84,19 @@ python -m pytest test/ -v
 
 ```
 .
-├── github_client.py       # GitHub API 客户端
-├── keyring_manager.py     # Token 系统密钥链存取
-├── chrome_profile.py      # Chrome Profile 检测 + 打开
-├── cache_manager.py       # 仓库缓存管理
-├── settings_manager.py    # 账号配置管理
+├── github_client.py       # GitHub API 客户端（urllib）
+├── keyring_manager.py      # Token 存储（base64 文件存储）
+├── chrome_profile.py       # Chrome Profile 检测 + 打开
+├── cache_manager.py        # 仓库缓存管理
+├── settings_manager.py     # 账号配置管理
+├── main.py                 # 插件入口
 ├── plugin/
-│   ├── __init__.py        # 插件入口
-│   ├── ui.py              # 查询逻辑 + JSON-RPC
-│   ├── settings.py        # 插件元数据
-│   └── translations/      # 国际化
-├── test/                  # 测试
+│   ├── __init__.py         # JSON-RPC 协议处理
+│   ├── ui.py               # 查询逻辑
+│   ├── settings.py         # 插件元数据
+│   └── translations/       # 国际化
 └── requirements.txt
 ```
-
-## 技术栈
-
-- Python 3
-- Flow Launcher Plugin API
-- GitHub REST API
-- 系统密钥链（keyring）
 
 ## License
 
