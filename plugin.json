@@ -1,0 +1,12 @@
+{
+    "ID": "8c3b4d7e-5f6a-4b8c-9d1e-2f3a4b5c6d7e",
+    "ActionKeyword": "gh",
+    "Name": "GitHub Quick Access",
+    "Description": "多 GitHub 账号快速访问，支持 Chrome Profile 隔离",
+    "Author": "Your Name",
+    "Version": "1.0.0",
+    "Language": "python",
+    "Website": "https://github.com/cangyan/github-quick-access",
+    "IcoPath": "assets/favicon.ico",
+    "ExecuteFileName": "main.py"
+}
