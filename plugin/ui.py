@@ -66,10 +66,12 @@ class Main(FlowLauncher):
 
         return self._search_repositories(q)
 
-    def _add_result(self, title: str, subtitle: str, method: str = None, parameters: list = None):
+    def _add_result(self, title: str, subtitle: str, method: str = None, parameters: list = None, ico_path: str = None):
         message = copy.deepcopy(RESULT_TEMPLATE)
         message["Title"] = title
         message["SubTitle"] = subtitle
+        if ico_path:
+            message["IcoPath"] = ico_path
         if method and parameters is not None:
             action = copy.deepcopy(ACTION_TEMPLATE)
             action["JsonRPCAction"]["method"] = method
@@ -106,11 +108,33 @@ class Main(FlowLauncher):
                     account_alias = account.get("alias", "unknown")
                     repo_full_name = repo.get("full_name", "")
                     private_label = "私有仓库" if repo.get("is_private") else "公开仓库"
+                    # 主页
                     self._add_result(
-                        f"[{account_alias}] {repo_full_name}",
-                        private_label,
+                        f"▶ [{account_alias}] {repo_full_name}",
+                        f"{private_label} - 主页",
                         method="openUrl",
                         parameters=[account["id"], repo_full_name, "home"]
+                    )
+                    # Merge Requests
+                    self._add_result(
+                        f"🔀 [{account_alias}] {repo_full_name} - MR",
+                        f"{private_label} - Merge Requests",
+                        method="openUrl",
+                        parameters=[account["id"], repo_full_name, "mr"]
+                    )
+                    # Actions
+                    self._add_result(
+                        f"⚡ [{account_alias}] {repo_full_name} - Actions",
+                        f"{private_label} - Actions",
+                        method="openUrl",
+                        parameters=[account["id"], repo_full_name, "actions"]
+                    )
+                    # Issues
+                    self._add_result(
+                        f"📋 [{account_alias}] {repo_full_name} - Issues",
+                        f"{private_label} - Issues",
+                        method="openUrl",
+                        parameters=[account["id"], repo_full_name, "issues"]
                     )
 
         return self.messages_queue[:self.max_results]
