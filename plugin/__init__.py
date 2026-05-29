@@ -30,10 +30,10 @@ def json_rpc_response(results: list) -> str:
     }, ensure_ascii=False)
 
 
-def json_rpc_error(error: str) -> str:
+def json_rpc_error(error_message: str) -> str:
     """生成 JSON-RPC 错误响应"""
     return json.dumps({
-        "error": error
+        "error": {"code": -32603, "message": error_message}
     }, ensure_ascii=False)
 
 
