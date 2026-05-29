@@ -1,0 +1,36 @@
+# English translations for Flow Launcher GitHub Quick Access
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_US\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Token 未配置"
+msgstr "Token not configured"
+
+msgid "缓存为空"
+msgstr "Cache is empty"
+
+msgid "输入 gh refresh 更新仓库列表"
+msgstr "Type gh refresh to update repository list"
+
+msgid "私有仓库"
+msgstr "Private repository"
+
+msgid "公开仓库"
+msgstr "Public repository"
+
+msgid "刷新完成"
+msgstr "Refresh complete"
+
+msgid "所有账号的仓库缓存已更新"
+msgstr "All accounts' repository cache updated"
+
+msgid "请在设置中添加 Token"
+msgstr "Please add Token in settings"
+
+msgid "GitHub Quick Access"
+msgstr "GitHub Quick Access"
+
+msgid "输入关键词搜索仓库，输入 gh help 查看帮助"
+msgstr "Type keyword to search repositories, type gh help for help"
