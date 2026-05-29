@@ -1,2 +1,1 @@
 flowlauncher
-keyring>=23.0.0
