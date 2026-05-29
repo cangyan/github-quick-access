@@ -174,15 +174,26 @@ def main():
             else:
                 print(json_rpc_response([]))
         elif req_data.get("method") == "Settings":
-            # Flow Launcher 请求设置界面
-            ui_html = generate_settings_ui()
+            # Flow Launcher 请求设置界面 - 返回内置设置结果
+            # 让 Flow Launcher 显示内置设置面板
+            settings_path = plugin_root / "settings.json"
+            settings_content = ""
+            if settings_path.exists():
+                try:
+                    with open(settings_path, "r", encoding="utf-8") as f:
+                        settings_content = f.read()
+                except:
+                    settings_content = "{}"
+            else:
+                settings_content = '{"accounts": [], "cache_ttl_minutes": 30, "max_results": 20}'
+
             print(json_rpc_response([{
-                "Title": "GitHub Quick Access 设置",
-                "SubTitle": "配置 GitHub 账号和 Chrome Profile",
+                "Title": "⚙️ GitHub Quick Access 设置",
+                "SubTitle": "在下方配置账号信息",
                 "IcoPath": "assets/favicon.ico",
                 "JsonRPCAction": {
                     "method": "OpenSettings",
-                    "parameters": [ui_html]
+                    "parameters": [settings_content]
                 }
             }]))
         else:

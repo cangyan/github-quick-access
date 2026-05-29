@@ -3,8 +3,11 @@ import os
 import platform
 import subprocess
 import json
+import logging
 from pathlib import Path
 from typing import List, Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 class ChromeProfileManager:
     """Chrome Profile 自动检测和浏览器打开"""
@@ -70,13 +73,17 @@ class ChromeProfileManager:
         if not chrome:
             raise Exception("Chrome executable not found")
 
-        if self.system == "windows":
-            cmd = [chrome, f"--profile-directory={profile_path}", url]
-        elif self.system == "darwin":
-            cmd = ["open", "-a", chrome, f"--args --profile-directory={profile_path}", url]
-        else:
-            cmd = [chrome, f"--profile-directory={profile_path}", url]
+        # 提取 profile 目录名称（去除路径，只保留 "Profile 1" 这样的名称）
+        profile_dir = os.path.basename(profile_path)
 
+        if self.system == "windows":
+            cmd = [chrome, f"--profile-directory={profile_dir}", url]
+        elif self.system == "darwin":
+            cmd = ["open", "-a", chrome, f"--args --profile-directory={profile_dir}", url]
+        else:
+            cmd = [chrome, f"--profile-directory={profile_dir}", url]
+
+        logger.debug(f"Running command: {' '.join(cmd)}")
         subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     @staticmethod

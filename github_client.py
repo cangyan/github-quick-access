@@ -72,6 +72,23 @@ class GitHubClient:
             all_repos.extend(self.get_org_repos(org))
         return all_repos
 
+    def get_user_orgs(self) -> List[Dict]:
+        """获取当前用户所属的组织列表"""
+        orgs = []
+        page = 1
+        while True:
+            data = self._make_request(
+                f"{self.BASE_URL}/user/orgs",
+                params={"per_page": 100, "page": page}
+            )
+            if not data:
+                break
+            orgs.extend(data)
+            if len(data) < 100:
+                break
+            page += 1
+        return orgs
+
     def validate_token(self) -> bool:
         """验证 Token 是否有效"""
         try:

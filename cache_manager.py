@@ -5,12 +5,23 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta, timezone
 
+def _get_cache_dir():
+    """获取缓存目录，兼容 Flow Launcher 的插件配置目录"""
+    # 尝试 Flow Launcher 全局插件配置目录
+    appdata = os.environ.get('APPDATA', '')
+    if appdata:
+        cache_dir = Path(appdata) / "FlowLauncher" / "Settings" / "Plugins" / "GitHub Quick Access" / "cache"
+        if cache_dir.exists():
+            return cache_dir
+    # 回退到插件目录
+    return Path(__file__).parent / "cache"
+
 class CacheManager:
     def __init__(self, cache_dir: Optional[str] = None):
         if cache_dir:
             self.cache_dir = Path(cache_dir)
         else:
-            self.cache_dir = Path(__file__).parent / "cache"
+            self.cache_dir = _get_cache_dir()
         self.cache_dir.mkdir(exist_ok=True)
 
     def _cache_path(self, account_id: str) -> Path:
