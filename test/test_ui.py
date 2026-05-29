@@ -1,21 +1,15 @@
 # -*- coding: utf-8 -*-
 import pytest
-from unittest.mock import MagicMock
-import importlib.util
+import ast
 
 
 def test_ui_module_structure():
     """Test that ui.py has expected class structure via source inspection"""
-    import ast
-
-    # Read the source file
     with open('plugin/ui.py', 'r') as f:
         source = f.read()
 
-    # Parse the AST
     tree = ast.parse(source)
 
-    # Find the Main class
     main_class = None
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef) and node.name == 'Main':
@@ -24,14 +18,10 @@ def test_ui_module_structure():
 
     assert main_class is not None, "Main class not found"
 
-    # Get all method names
     methods = [n.name for n in main_class.body if isinstance(n, ast.FunctionDef)]
 
     assert 'query' in methods, "query method not found"
     assert 'openUrl' in methods, "openUrl method not found"
-    assert 'openMr' in methods, "openMr method not found"
-    assert 'openActions' in methods, "openActions method not found"
-    assert 'openIssues' in methods, "openIssues method not found"
 
 
 def test_ui_imports():
@@ -39,7 +29,7 @@ def test_ui_imports():
     with open('plugin/ui.py', 'r') as f:
         content = f.read()
 
-    assert 'from flowlauncher import FlowLauncher' in content
+    assert 'from flowlauncher import FlowLauncher' not in content
     assert 'import webbrowser' in content
     assert 'import threading' in content
     assert 'from github_client import GitHubClient' in content

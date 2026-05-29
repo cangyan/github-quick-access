@@ -2,32 +2,27 @@
 import webbrowser
 import threading
 import copy
+import json
+from pathlib import Path
 from typing import List
 
-from flowlauncher import FlowLauncher
-
-from plugin.settings import ICON_PATH, PLUGIN_ACTION_KEYWORD
-from plugin.templates import RESULT_TEMPLATE, ACTION_TEMPLATE
+from plugin.settings import ICON_PATH
 from github_client import GitHubClient
 from cache_manager import CacheManager
 from chrome_profile import ChromeProfileManager
 from keyring_manager import KeyringManager
 
 
-class Main(FlowLauncher):
-    messages_queue = []
+class Main:
+    """GitHub Quick Access 插件主类"""
 
     def __init__(self):
-        super().__init__()
         self.cache_manager = CacheManager()
         self.keyring_manager = KeyringManager()
         self.chrome_manager = ChromeProfileManager()
-        # 加载配置
         self._settings = self._load_settings()
 
     def _load_settings(self):
-        import json
-        from pathlib import Path
         settings_path = Path(__file__).parent.parent / "settings.json"
         if settings_path.exists():
             with open(settings_path, "r", encoding="utf-8") as f:
@@ -47,59 +42,48 @@ class Main(FlowLauncher):
         return self._settings.get("max_results", 20)
 
     def query(self, param: str) -> List[dict]:
-        self.messages_queue = []
+        results = []
         q = param.strip()
 
         if not q:
-            self._add_result(
-                "GitHub Quick Access",
-                "输入关键词搜索仓库，输入 gh help 查看帮助",
-                method=None
-            )
-            return self.messages_queue
+            return [{
+                "Title": "GitHub Quick Access",
+                "SubTitle": "输入关键词搜索仓库，输入 gh help 查看帮助",
+                "IcoPath": ICON_PATH,
+            }]
 
         if q.lower() == "help":
-            return self._build_help_results()
+            return [
+                {"Title": "gh <关键词>", "SubTitle": "搜索仓库", "IcoPath": ICON_PATH},
+                {"Title": "gh refresh", "SubTitle": "刷新所有账号的仓库缓存", "IcoPath": ICON_PATH},
+                {"Title": "gh help", "SubTitle": "显示帮助", "IcoPath": ICON_PATH},
+            ]
 
         if q.lower() == "refresh":
-            return self._refresh_all_accounts()
+            for account in self.accounts:
+                self._refresh_account_cache(account)
+            return [{"Title": "刷新完成", "SubTitle": "所有账号的仓库缓存已更新", "IcoPath": ICON_PATH}]
 
-        return self._search_repositories(q)
-
-    def _add_result(self, title: str, subtitle: str, method: str = None, parameters: list = None, ico_path: str = None):
-        message = copy.deepcopy(RESULT_TEMPLATE)
-        message["Title"] = title
-        message["SubTitle"] = subtitle
-        if ico_path:
-            message["IcoPath"] = ico_path
-        if method and parameters is not None:
-            action = copy.deepcopy(ACTION_TEMPLATE)
-            action["JsonRPCAction"]["method"] = method
-            action["JsonRPCAction"]["parameters"] = parameters
-            message.update(action)
-        self.messages_queue.append(message)
-
-    def _search_repositories(self, keyword: str) -> List[dict]:
         results = []
-        keyword_lower = keyword.lower()
+        keyword_lower = q.lower()
 
         for account in self.accounts:
             token = self.keyring_manager.get_token(account.get("token_ref", ""))
             if not token:
-                self._add_result(
-                    f"[{account.get('alias', 'unknown')}] Token 未配置",
-                    "请在设置中添加 Token",
-                    method=None
-                )
+                results.append({
+                    "Title": f"[{account.get('alias', 'unknown')}] Token 未配置",
+                    "SubTitle": "请在设置中添加 Token",
+                    "IcoPath": ICON_PATH,
+                })
                 continue
 
             cache = self.cache_manager.get_cache(account["id"], self.cache_ttl_minutes)
             if not cache:
-                self._add_result(
-                    f"[{account.get('alias', 'unknown')}] 缓存为空",
-                    "输入 gh refresh 更新仓库列表",
-                    method=None
-                )
+                results.append({
+                    "Title": f"[{account.get('alias', 'unknown')}] 缓存为空",
+                    "SubTitle": "输入 gh refresh 更新仓库列表",
+                    "IcoPath": ICON_PATH,
+                })
                 continue
 
             for repo in cache.get("repositories", []):
@@ -108,50 +92,44 @@ class Main(FlowLauncher):
                     account_alias = account.get("alias", "unknown")
                     repo_full_name = repo.get("full_name", "")
                     private_label = "私有仓库" if repo.get("is_private") else "公开仓库"
-                    # 主页
-                    self._add_result(
-                        f"▶ [{account_alias}] {repo_full_name}",
-                        f"{private_label} - 主页",
-                        method="openUrl",
-                        parameters=[account["id"], repo_full_name, "home"]
-                    )
-                    # Merge Requests
-                    self._add_result(
-                        f"🔀 [{account_alias}] {repo_full_name} - MR",
-                        f"{private_label} - Merge Requests",
-                        method="openUrl",
-                        parameters=[account["id"], repo_full_name, "mr"]
-                    )
-                    # Actions
-                    self._add_result(
-                        f"⚡ [{account_alias}] {repo_full_name} - Actions",
-                        f"{private_label} - Actions",
-                        method="openUrl",
-                        parameters=[account["id"], repo_full_name, "actions"]
-                    )
-                    # Issues
-                    self._add_result(
-                        f"📋 [{account_alias}] {repo_full_name} - Issues",
-                        f"{private_label} - Issues",
-                        method="openUrl",
-                        parameters=[account["id"], repo_full_name, "issues"]
-                    )
+                    results.append({
+                        "Title": f"▶ [{account_alias}] {repo_full_name}",
+                        "SubTitle": f"{private_label} - 主页",
+                        "IcoPath": ICON_PATH,
+                        "JsonRPCAction": {
+                            "method": "openUrl",
+                            "parameters": [account["id"], repo_full_name, "home"]
+                        }
+                    })
+                    results.append({
+                        "Title": f"🔀 [{account_alias}] {repo_full_name} - MR",
+                        "SubTitle": f"{private_label} - Merge Requests",
+                        "IcoPath": ICON_PATH,
+                        "JsonRPCAction": {
+                            "method": "openUrl",
+                            "parameters": [account["id"], repo_full_name, "mr"]
+                        }
+                    })
+                    results.append({
+                        "Title": f"⚡ [{account_alias}] {repo_full_name} - Actions",
+                        "SubTitle": f"{private_label} - Actions",
+                        "IcoPath": ICON_PATH,
+                        "JsonRPCAction": {
+                            "method": "openUrl",
+                            "parameters": [account["id"], repo_full_name, "actions"]
+                        }
+                    })
+                    results.append({
+                        "Title": f"📋 [{account_alias}] {repo_full_name} - Issues",
+                        "SubTitle": f"{private_label} - Issues",
+                        "IcoPath": ICON_PATH,
+                        "JsonRPCAction": {
+                            "method": "openUrl",
+                            "parameters": [account["id"], repo_full_name, "issues"]
+                        }
+                    })
 
-        return self.messages_queue[:self.max_results]
-
-    def _build_help_results(self) -> List[dict]:
-        self.messages_queue = []
-        self._add_result("gh <关键词>", "搜索仓库", method=None)
-        self._add_result("gh refresh", "刷新所有账号的仓库缓存", method=None)
-        self._add_result("gh help", "显示帮助", method=None)
-        return self.messages_queue
-
-    def _refresh_all_accounts(self) -> List[dict]:
-        self.messages_queue = []
-        for account in self.accounts:
-            self._refresh_account_cache(account)
-        self._add_result("刷新完成", "所有账号的仓库缓存已更新", method=None)
-        return self.messages_queue
+        return results[:self.max_results]
 
     def _refresh_account_cache(self, account):
         def _do_refresh():
@@ -169,7 +147,7 @@ class Main(FlowLauncher):
                     "org": r.get("owner", {}).get("login", "")
                 } for r in repos]
                 self.cache_manager.set_cache(account["id"], simplified)
-            except Exception as e:
+            except Exception:
                 pass
 
         thread = threading.Thread(target=_do_refresh)
@@ -185,14 +163,5 @@ class Main(FlowLauncher):
         profile_path = account.get("chrome_profile_path", "")
         try:
             self.chrome_manager.open_url(profile_path, url)
-        except Exception as e:
+        except Exception:
             webbrowser.open(url)
-
-    def openMr(self, account_id: str, repo_full_name: str):
-        self.openUrl(account_id, repo_full_name, "mr")
-
-    def openActions(self, account_id: str, repo_full_name: str):
-        self.openUrl(account_id, repo_full_name, "actions")
-
-    def openIssues(self, account_id: str, repo_full_name: str):
-        self.openUrl(account_id, repo_full_name, "issues")
