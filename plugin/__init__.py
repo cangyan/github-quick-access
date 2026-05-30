@@ -6,10 +6,43 @@ Flow Launcher Plugin: GitHub Quick Access
 import sys
 import json
 import base64
+from pathlib import Path
 
 # 插件根目录
-from pathlib import Path
 plugin_root = Path(__file__).parent.parent
+
+# --- i18n for settings UI ---
+_settings_translations: dict = {}
+_settings_locale: str = "en"
+
+def _load_settings_translations():
+    global _settings_translations
+    trans_dir = plugin_root / "plugin" / "translations"
+    for f in trans_dir.glob("*.json"):
+        with open(f, "r", encoding="utf-8") as fp:
+            _settings_translations[f.stem] = json.load(fp)
+
+def _t(key: str, locale: str = None) -> str:
+    loc = locale or _settings_locale
+    return _settings_translations.get(loc, {}).get(key, _settings_translations.get("en", {}).get(key, key))
+
+def _detect_locale():
+    """Detect language from settings.json"""
+    settings_path = plugin_root / "settings.json"
+    if settings_path.exists():
+        try:
+            with open(settings_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                lang = data.get("language", "en")
+                if lang in ("en", "zh", "ja"):
+                    return lang
+        except:
+            pass
+    return "en"
+
+# Load translations on import
+_load_settings_translations()
+_settings_locale = _detect_locale()
 
 
 def json_rpc_response(results: list) -> str:
@@ -42,19 +75,19 @@ def generate_settings_ui() -> str:
     # 生成账号列表 HTML
     accounts_html = ""
     for acc in accounts:
-        alias = acc.get("alias", "未命名")
+        alias = acc.get("alias", _t("unconfigured"))
         acc_id = acc.get("id", "")
         profile = acc.get("chrome_profile_path", "")
         orgs = ", ".join(acc.get("organizations", []))
         token_ref = acc.get("token_ref", "")
         accounts_html += f"""
         <div style="border:1px solid #ccc;padding:10px;margin:10px 0;border-radius:4px;">
-            <h4 style="margin:0 0 10px 0;">账号: {alias}</h4>
+            <h4 style="margin:0 0 10px 0;">{_t("plugin_name")}: {alias}</h4>
             <p style="margin:5px 0;"><strong>ID:</strong> {acc_id}</p>
-            <p style="margin:5px 0;"><strong>Token ref:</strong> {token_ref}</p>
-            <p style="margin:5px 0;"><strong>Chrome Profile:</strong> {profile or "未配置"}</p>
-            <p style="margin:5px 0;"><strong>Organizations:</strong> {orgs or "无"}</p>
-            <button onclick="deleteAccount('{acc_id}')" style="background:#ff4444;color:white;border:none;padding:5px 10px;cursor:pointer;">删除</button>
+            <p style="margin:5px 0;"><strong>Token ref:</strong> {token_ref or _t("unconfigured")}</p>
+            <p style="margin:5px 0;"><strong>Chrome Profile:</strong> {profile or _t("unconfigured")}</p>
+            <p style="margin:5px 0;"><strong>Organizations:</strong> {orgs or _t("none")}</p>
+            <button onclick="deleteAccount('{acc_id}')" style="background:#ff4444;color:white;border:none;padding:5px 10px;cursor:pointer;">{_t("delete_account")}</button>
         </div>
         """
 
@@ -63,7 +96,7 @@ def generate_settings_ui() -> str:
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>GitHub Quick Access 设置</title>
+    <title>{_t("plugin_name")} {_t("settings_title")}</title>
     <style>
         body {{ font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }}
         h2 {{ color: #333; }}
@@ -76,12 +109,12 @@ def generate_settings_ui() -> str:
     </style>
 </head>
 <body>
-    <h2>⚙️ GitHub Quick Access 设置</h2>
+    <h2>⚙️ {_t("settings_btn")}</h2>
 
-    <h3>添加账号</h3>
+    <h3>{_t("add_account")}</h3>
     <form id="addAccountForm">
         <div class="form-group">
-            <label>账号别名 (如: Personal, Work):</label>
+            <label>{_t("account_alias_placeholder")}</label>
             <input type="text" id="alias" placeholder="Personal" required>
         </div>
         <div class="form-group">
@@ -89,19 +122,19 @@ def generate_settings_ui() -> str:
             <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxx" required>
         </div>
         <div class="form-group">
-            <label>Chrome Profile 路径:</label>
-            <input type="text" id="chromeProfile" placeholder="C:\\Users\\你的用户名\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 1">
+            <label>{_t("chrome_profile_path")}</label>
+            <input type="text" id="chromeProfile" placeholder="C:\\Users\\...">
         </div>
         <div class="form-group">
-            <label>Organizations (逗号分隔，可留空):</label>
+            <label>{_t("orgs_placeholder")}</label>
             <input type="text" id="orgs" placeholder="org1, org2">
         </div>
-        <button type="submit">添加账号</button>
+        <button type="submit">{_t("add_account")}</button>
     </form>
 
     <div class="account-list">
-        <h3>已配置的账号</h3>
-        {accounts_html if accounts_html else "<p>暂无账号</p>"}
+        <h3>{_t("configured_accounts")}</h3>
+        {accounts_html if accounts_html else f"<p>{_t('no_accounts')}</p>"}
     </div>
 
     <script>
@@ -125,7 +158,7 @@ def generate_settings_ui() -> str:
         }});
 
         function deleteAccount(accId) {{
-            if (confirm('确定要删除这个账号吗？')) {{
+            if (confirm('{_t("delete_confirm")}')) {{
                 const result = FlowLauncher.SaveSettings(JSON.stringify({{
                     action: 'delete_account',
                     account_id: accId
@@ -188,8 +221,8 @@ def main():
                 settings_content = '{"accounts": [], "cache_ttl_minutes": 30, "max_results": 20}'
 
             print(json_rpc_response([{
-                "Title": "⚙️ GitHub Quick Access 设置",
-                "SubTitle": "在下方配置账号信息",
+                "Title": f"⚙️ {_t('settings_btn')}",
+                "SubTitle": _t("settings_hint"),
                 "IcoPath": "assets/favicon.ico",
                 "JsonRPCAction": {
                     "method": "OpenSettings",

@@ -12,6 +12,37 @@ from cache_manager import CacheManager
 from chrome_profile import ChromeProfileManager
 from keyring_manager import KeyringManager
 
+# --- i18n ---
+_ui_translations: dict = {}
+_ui_locale: str = "en"
+
+def _load_ui_translations():
+    global _ui_translations
+    trans_dir = Path(__file__).parent / "translations"
+    for f in trans_dir.glob("*.json"):
+        with open(f, "r", encoding="utf-8") as fp:
+            _ui_translations[f.stem] = json.load(fp)
+
+def _t(key: str, locale: str = None) -> str:
+    loc = locale or _ui_locale
+    return _ui_translations.get(loc, {}).get(key, _ui_translations.get("en", {}).get(key, key))
+
+def _detect_locale():
+    settings_path = Path(__file__).parent.parent / "settings.json"
+    if settings_path.exists():
+        try:
+            with open(settings_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                lang = data.get("language", "en")
+                if lang in ("en", "zh", "ja"):
+                    return lang
+        except:
+            pass
+    return "en"
+
+_load_ui_translations()
+_ui_locale = _detect_locale()
+
 
 class Main:
     """GitHub Quick Access 插件主类"""
@@ -47,22 +78,22 @@ class Main:
 
         if not q:
             return [{
-                "Title": "GitHub Quick Access",
-                "SubTitle": "输入关键词搜索仓库，输入 gh help 查看帮助",
+                "Title": _t("plugin_name"),
+                "SubTitle": _t("search_placeholder"),
                 "IcoPath": ICON_PATH,
             }]
 
         if q.lower() == "help":
             return [
-                {"Title": "gh <关键词>", "SubTitle": "搜索仓库", "IcoPath": ICON_PATH},
-                {"Title": "gh refresh", "SubTitle": "刷新所有账号的仓库缓存", "IcoPath": ICON_PATH},
-                {"Title": "gh help", "SubTitle": "显示帮助", "IcoPath": ICON_PATH},
+                {"Title": "gh <keyword>", "SubTitle": _t("help_search"), "IcoPath": ICON_PATH},
+                {"Title": "gh refresh", "SubTitle": _t("help_refresh"), "IcoPath": ICON_PATH},
+                {"Title": "gh help", "SubTitle": _t("help_show"), "IcoPath": ICON_PATH},
             ]
 
         if q.lower() == "refresh":
             for account in self.accounts:
                 self._refresh_account_cache(account)
-            return [{"Title": "刷新完成", "SubTitle": "所有账号的仓库缓存已更新", "IcoPath": ICON_PATH}]
+            return [{"Title": _t("refresh_done"), "SubTitle": _t("refresh_done_subtitle"), "IcoPath": ICON_PATH}]
 
         results = []
         keyword_lower = q.lower()
@@ -71,8 +102,8 @@ class Main:
             token = self.keyring_manager.get_token(account.get("token_ref", ""))
             if not token:
                 results.append({
-                    "Title": f"[{account.get('alias', 'unknown')}] Token 未配置",
-                    "SubTitle": "请在设置中添加 Token",
+                    "Title": f"[{account.get('alias', 'unknown')}] {_t('token_unconfigured')}",
+                    "SubTitle": _t("token_hint"),
                     "IcoPath": ICON_PATH,
                 })
                 continue
@@ -80,8 +111,8 @@ class Main:
             cache = self.cache_manager.get_cache(account["id"], self.cache_ttl_minutes)
             if not cache:
                 results.append({
-                    "Title": f"[{account.get('alias', 'unknown')}] 缓存为空",
-                    "SubTitle": "输入 gh refresh 更新仓库列表",
+                    "Title": f"[{account.get('alias', 'unknown')}] {_t('cache_empty')}",
+                    "SubTitle": _t("cache_hint"),
                     "IcoPath": ICON_PATH,
                 })
                 continue
@@ -91,10 +122,10 @@ class Main:
                 if keyword_lower in full_name:
                     account_alias = account.get("alias", "unknown")
                     repo_full_name = repo.get("full_name", "")
-                    private_label = "私有仓库" if repo.get("is_private") else "公开仓库"
+                    private_label = _t("private_repo") if repo.get("is_private") else _t("public_repo")
                     results.append({
                         "Title": f"▶ [{account_alias}] {repo_full_name}",
-                        "SubTitle": f"{private_label} - 主页",
+                        "SubTitle": f"{private_label} - {_t('home')}",
                         "IcoPath": ICON_PATH,
                         "JsonRPCAction": {
                             "method": "openUrl",
@@ -102,7 +133,7 @@ class Main:
                         }
                     })
                     results.append({
-                        "Title": f"🔀 [{account_alias}] {repo_full_name} - MR",
+                        "Title": f"🔀 [{account_alias}] {repo_full_name} - {_t('mr')}",
                         "SubTitle": f"{private_label} - Merge Requests",
                         "IcoPath": ICON_PATH,
                         "JsonRPCAction": {
@@ -111,8 +142,8 @@ class Main:
                         }
                     })
                     results.append({
-                        "Title": f"⚡ [{account_alias}] {repo_full_name} - Actions",
-                        "SubTitle": f"{private_label} - Actions",
+                        "Title": f"⚡ [{account_alias}] {repo_full_name} - {_t('actions')}",
+                        "SubTitle": f"{private_label} - {_t('actions')}",
                         "IcoPath": ICON_PATH,
                         "JsonRPCAction": {
                             "method": "openUrl",
@@ -120,8 +151,8 @@ class Main:
                         }
                     })
                     results.append({
-                        "Title": f"📋 [{account_alias}] {repo_full_name} - Issues",
-                        "SubTitle": f"{private_label} - Issues",
+                        "Title": f"📋 [{account_alias}] {repo_full_name} - {_t('issues')}",
+                        "SubTitle": f"{private_label} - {_t('issues')}",
                         "IcoPath": ICON_PATH,
                         "JsonRPCAction": {
                             "method": "openUrl",

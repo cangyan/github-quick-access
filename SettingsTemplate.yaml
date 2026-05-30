@@ -2,24 +2,30 @@ body:
     - type: input
       attributes:
           name: cache_ttl_minutes
-          label: "缓存时间 (分钟):"
-          description: "仓库缓存有效期，默认30分钟"
+          label: "Cache TTL (minutes):"
+          description: "Repository cache validity period, default 30 minutes"
           defaultValue: "30"
     - type: input
       attributes:
           name: max_results
-          label: "最大结果数:"
-          description: "搜索返回的最大结果数量"
+          label: "Max results:"
+          description: "Maximum number of search results"
           defaultValue: "20"
+    - type: input
+      attributes:
+          name: language
+          label: "UI Language (en/zh/ja):"
+          description: "Select UI language"
+          defaultValue: "en"
     - type: textBlock
       attributes:
-          description: "账号配置 - 支持多账号，每个账号独立 Token 和 Chrome Profile"
+          description: "Account configuration - supports multiple accounts, each with independent Token and Chrome Profile"
     - type: textarea
       attributes:
           name: accounts_json
-          label: "账号配置 (JSON):"
-          description: "JSON 格式多账号配置"
+          label: "Account config (JSON):"
+          description: "JSON format multi-account configuration"
           defaultValue: "[]"
     - type: textBlock
       attributes:
-          description: "配置示例: [{\"alias\": \"Personal\", \"token\": \"ghp_xxx\", \"chrome_profile_path\": \"C:\\\\Users\\\\...\\\\Profile 1\"}]"
+          description: 'Example: [{"alias": "Personal", "token": "ghp_xxx", "chrome_profile_path": "C:\\Users\\...\\Profile 1"}]'

@@ -46,6 +46,28 @@ from chrome_profile import ChromeProfileManager
 
 ICON_PATH = "assets/favicon.ico"
 
+# --- i18n ---
+_translations: dict = {}
+_current_locale: str = "en"
+
+def _load_translations():
+    global _translations
+    trans_dir = Path(__file__).parent / "plugin" / "translations"
+    for f in trans_dir.glob("*.json"):
+        with open(f, "r", encoding="utf-8") as fp:
+            _translations[f.stem] = json.load(fp)
+
+def t(key: str, locale: str = None) -> str:
+    loc = locale or _current_locale
+    return _translations.get(loc, {}).get(key, _translations.get("en", {}).get(key, key))
+
+def _set_locale(locale: str):
+    global _current_locale
+    _current_locale = locale
+
+# Load translations on module init
+_load_translations()
+
 
 class Main:
     """GitHub Quick Access 插件主类"""
@@ -54,6 +76,7 @@ class Main:
         self.cache_manager = CacheManager()
         self.chrome_manager = ChromeProfileManager()
         self._settings = self._load_settings(rpc_settings)
+        _set_locale(self._settings.get("language", "en"))
 
     def _load_settings(self, rpc_settings=None):
         # 优先使用 Flow Launcher 传递的 settings
@@ -61,6 +84,7 @@ class Main:
             settings = dict(rpc_settings)
             settings["cache_ttl_minutes"] = int(settings.get("cache_ttl_minutes") or 30)
             settings["max_results"] = int(settings.get("max_results") or 20)
+            settings.setdefault("language", "en")
             return settings
         # 回退到文件
         settings_path = _get_settings_path()
@@ -73,7 +97,7 @@ class Main:
                     return settings
             except Exception:
                 pass
-        return {"cache_ttl_minutes": 30, "max_results": 20, "accounts_json": "[]"}
+        return {"cache_ttl_minutes": 30, "max_results": 20, "accounts_json": "[]", "language": "en"}
 
     @property
     def settings(self):
@@ -105,22 +129,22 @@ class Main:
 
         if not q:
             return [{
-                "Title": "GitHub Quick Access",
-                "SubTitle": "输入关键词搜索仓库，输入 gh help 查看帮助",
+                "Title": t("plugin_name"),
+                "SubTitle": t("search_placeholder"),
                 "IcoPath": ICON_PATH,
             }]
 
         if q.lower() == "help":
             return [
-                {"Title": "gh <关键词>", "SubTitle": "搜索仓库", "IcoPath": ICON_PATH},
-                {"Title": "gh refresh", "SubTitle": "刷新所有账号的仓库缓存", "IcoPath": ICON_PATH},
-                {"Title": "gh help", "SubTitle": "显示帮助", "IcoPath": ICON_PATH},
+                {"Title": "gh <keyword>", "SubTitle": t("help_search"), "IcoPath": ICON_PATH},
+                {"Title": "gh refresh", "SubTitle": t("help_refresh"), "IcoPath": ICON_PATH},
+                {"Title": "gh help", "SubTitle": t("help_show"), "IcoPath": ICON_PATH},
             ]
 
         if q.lower() == "refresh":
             for account in self._get_accounts():
                 self._refresh_account_cache(account)
-            return [{"Title": "刷新完成", "SubTitle": "所有账号的仓库缓存已更新", "IcoPath": ICON_PATH}]
+            return [{"Title": t("refresh_done"), "SubTitle": t("refresh_done_subtitle"), "IcoPath": ICON_PATH}]
 
         # 完整仓库名搜索: owner/repo 格式 → 显示 4 个页面选项
         if "/" in q:
@@ -131,7 +155,7 @@ class Main:
                 # repo_name 是 / 后面的所有内容
                 repo_name = "/".join(parts[1:]).strip()
                 # 去掉可能的后缀文字
-                for suffix in [" 主页", " MR", " Actions", " Issues"]:
+                for suffix in [f" {t('home')}", f" {t('mr')}", f" {t('actions')}", f" {t('issues')}"]:
                     if repo_name.endswith(suffix):
                         repo_name = repo_name[:-len(suffix)].strip()
                         break
@@ -147,10 +171,10 @@ class Main:
                         full_name = repo.get("full_name", "")
                         if full_name.lower() == f"{owner}/{repo_name}".lower():
                             account_alias = account.get("alias", "unknown")
-                            private_label = "私有仓库" if repo.get("is_private") else "公开仓库"
+                            private_label = t("private_repo") if repo.get("is_private") else t("public_repo")
                             return [
                                 {
-                                    "Title": f"{full_name} 主页",
+                                    "Title": f"{full_name} {t('home')}",
                                     "SubTitle": f"{private_label} | {account_alias}",
                                     "IcoPath": ICON_PATH,
                                     "JsonRPCAction": {
@@ -159,7 +183,7 @@ class Main:
                                     }
                                 },
                                 {
-                                    "Title": f"{full_name} MR",
+                                    "Title": f"{full_name} {t('mr')}",
                                     "SubTitle": f"{private_label} | {account_alias}",
                                     "IcoPath": ICON_PATH,
                                     "JsonRPCAction": {
@@ -168,7 +192,7 @@ class Main:
                                     }
                                 },
                                 {
-                                    "Title": f"{full_name} Actions",
+                                    "Title": f"{full_name} {t('actions')}",
                                     "SubTitle": f"{private_label} | {account_alias}",
                                     "IcoPath": ICON_PATH,
                                     "JsonRPCAction": {
@@ -177,7 +201,7 @@ class Main:
                                     }
                                 },
                                 {
-                                    "Title": f"{full_name} Issues",
+                                    "Title": f"{full_name} {t('issues')}",
                                     "SubTitle": f"{private_label} | {account_alias}",
                                     "IcoPath": ICON_PATH,
                                     "JsonRPCAction": {
@@ -197,8 +221,8 @@ class Main:
             token = account.get("token", "")
             if not token:
                 results.append({
-                    "Title": f"[{account.get('alias', 'unknown')}] Token 未配置",
-                    "SubTitle": "请在设置中添加 Token",
+                    "Title": f"[{account.get('alias', 'unknown')}] {t('token_unconfigured')}",
+                    "SubTitle": t("token_hint"),
                     "IcoPath": ICON_PATH,
                 })
                 continue
@@ -206,8 +230,8 @@ class Main:
             cache = self.cache_manager.get_cache(account["id"], self.settings.get("cache_ttl_minutes", 30))
             if not cache:
                 results.append({
-                    "Title": f"[{account.get('alias', 'unknown')}] 缓存为空",
-                    "SubTitle": "输入 gh refresh 更新仓库列表",
+                    "Title": f"[{account.get('alias', 'unknown')}] {t('cache_empty')}",
+                    "SubTitle": t("cache_hint"),
                     "IcoPath": ICON_PATH,
                 })
                 continue
@@ -217,10 +241,10 @@ class Main:
                 if keyword_lower in full_name:
                     account_alias = account.get("alias", "unknown")
                     repo_full_name = repo.get("full_name", "")
-                    private_label = "私有仓库" if repo.get("is_private") else "公开仓库"
+                    private_label = t("private_repo") if repo.get("is_private") else t("public_repo")
                     results.append({
                         "Title": f"{repo_full_name}",
-                        "SubTitle": f"{private_label} | {account_alias} | 回车选择页面",
+                        "SubTitle": f"{private_label} | {account_alias} | {t('select_page')}",
                         "IcoPath": ICON_PATH,
                         "JsonRPCAction": {
                             "method": "Flow.Launcher.ChangeQuery",
@@ -307,16 +331,16 @@ class Main:
         cache = self.cache_manager.get_cache(account_id, self.settings.get("cache_ttl_minutes", 30))
         if not cache:
             return []
-        private_label = "私有仓库"
+        private_label = t("private_repo")
         for repo in cache.get("repositories", []):
             if repo.get("full_name") == repo_full_name:
-                private_label = "私有仓库" if repo.get("is_private") else "公开仓库"
+                private_label = t("private_repo") if repo.get("is_private") else t("public_repo")
                 break
 
         account_alias = account.get("alias", "unknown")
         return [
             {
-                "Title": f"{repo_full_name} 主页",
+                "Title": f"{repo_full_name} {t('home')}",
                 "SubTitle": f"{private_label} | {account_alias}",
                 "IcoPath": ICON_PATH,
                 "JsonRPCAction": {
@@ -325,7 +349,7 @@ class Main:
                 }
             },
             {
-                "Title": f"{repo_full_name} MR",
+                "Title": f"{repo_full_name} {t('mr')}",
                 "SubTitle": f"{private_label} | {account_alias}",
                 "IcoPath": ICON_PATH,
                 "JsonRPCAction": {
@@ -334,7 +358,7 @@ class Main:
                 }
             },
             {
-                "Title": f"{repo_full_name} Actions",
+                "Title": f"{repo_full_name} {t('actions')}",
                 "SubTitle": f"{private_label} | {account_alias}",
                 "IcoPath": ICON_PATH,
                 "JsonRPCAction": {
@@ -343,7 +367,7 @@ class Main:
                 }
             },
             {
-                "Title": f"{repo_full_name} Issues",
+                "Title": f"{repo_full_name} {t('issues')}",
                 "SubTitle": f"{private_label} | {account_alias}",
                 "IcoPath": ICON_PATH,
                 "JsonRPCAction": {
