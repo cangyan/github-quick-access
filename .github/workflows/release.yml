@@ -13,12 +13,14 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.python_ver }}
 
@@ -37,7 +39,7 @@ jobs:
 
       - name: Publish
         if: success()
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           files: 'GitHubQuickAccess-${{ steps.version.outputs.prop }}.zip'
           tag_name: "v${{steps.version.outputs.prop}}"
