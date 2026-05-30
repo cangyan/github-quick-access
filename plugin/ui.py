@@ -129,7 +129,16 @@ class Main:
                         }
                     })
 
-        return results[:self.max_results]
+        # 按 repo_full_name 去重，保留每个仓库的第一条结果（主页优先）
+        seen = set()
+        unique_results = []
+        for r in results:
+            repo_name = r.get("JsonRPCAction", {}).get("parameters", [None])[1] or ""
+            if repo_name and repo_name not in seen:
+                seen.add(repo_name)
+                unique_results.append(r)
+
+        return unique_results[:self.max_results]
 
     def _refresh_account_cache(self, account):
         def _do_refresh():

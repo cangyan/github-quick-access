@@ -246,7 +246,16 @@ class Main:
                 if account_id:
                     return self.selectRepo(account_id, repo_full_name)
 
-        return results[:self.settings.get("max_results", 20)]
+        # 按 repo_full_name 去重，保留第一个匹配结果
+        seen = set()
+        unique_results = []
+        for r in results:
+            repo_name = r.get("JsonRPCAction", {}).get("parameters", [None])[1] or ""
+            if repo_name and repo_name not in seen:
+                seen.add(repo_name)
+                unique_results.append(r)
+
+        return unique_results[:self.settings.get("max_results", 20)]
 
     def _refresh_account_cache(self, account):
         def _do_refresh():
