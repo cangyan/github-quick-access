@@ -4,7 +4,7 @@
     "Name": "GitHub Quick Access",
     "Description": "多 GitHub 账号快速访问，支持 Chrome Profile 隔离",
     "Author": "cangyan",
-    "Version": "1.0.41",
+    "Version": "1.0.42",
     "Language": "python",
     "Website": "https://github.com/cangyan/github-quick-access",
     "IcoPath": "assets/favicon.ico",
