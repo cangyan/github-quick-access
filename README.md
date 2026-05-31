@@ -17,7 +17,7 @@ Multi-GitHub account quick access plugin with Chrome Profile isolation.
 
 ## Install
 
-1. Download `GitHubQuickAccess-1.0.43.zip` and extract to Flow Launcher plugin directory
+1. Download `GitHubQuickAccess-1.0.44.zip` and extract to Flow Launcher plugin directory
 2. Restart Flow Launcher
 3. Configure GitHub accounts in plugin settings
 
