@@ -276,9 +276,10 @@ class Main:
         seen = set()
         unique_results = []
         for r in results:
-            repo_name = r.get("JsonRPCAction", {}).get("parameters", [None])[1] or ""
-            if repo_name and repo_name not in seen:
-                seen.add(repo_name)
+            # parameters[0] = "gh owner/repo" 查询字符串
+            repo_query = r.get("JsonRPCAction", {}).get("parameters", [None])[0] or ""
+            if repo_query and repo_query not in seen:
+                seen.add(repo_query)
                 unique_results.append(r)
 
         return unique_results[:self.settings.get("max_results", 20)]
