@@ -238,7 +238,9 @@ class Main:
 
             for repo in cache.get("repositories", []):
                 full_name = repo.get("full_name", "").lower()
-                if keyword_lower in full_name:
+                name = repo.get("name", "").lower()
+                # 同时搜索 full_name 和 name，确保模糊匹配完整
+                if keyword_lower in full_name or keyword_lower in name:
                     account_alias = account.get("alias", "unknown")
                     repo_full_name = repo.get("full_name", "")
                     private_label = t("private_repo") if repo.get("is_private") else t("public_repo")
